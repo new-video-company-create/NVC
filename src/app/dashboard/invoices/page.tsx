@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { getInvoices, getInvoiceById, calcInvoiceTotal, FMT, type Invoice } from "@/lib/storage";
+import { deleteInvoice, getInvoices, getInvoiceById, calcInvoiceTotal, FMT, type Invoice } from "@/lib/storage";
 import { downloadInvoicePDF } from "@/lib/invoice-pdf";
 
 function InvoicesList() {
@@ -24,6 +24,14 @@ function InvoicesList() {
   }, [viewId]);
 
   const handleDownload = (inv: Invoice) => downloadInvoicePDF(inv);
+  const handleDelete = (id: string) => {
+    const ok = window.confirm("Delete this invoice? This action cannot be undone.");
+    if (!ok) return;
+    deleteInvoice(id);
+    const all = getInvoices();
+    setInvoices(all);
+    setViewing((prev) => (prev?.id === id ? null : prev));
+  };
 
   return (
     <div className="space-y-6">
@@ -54,6 +62,7 @@ function InvoicesList() {
                 <div className="flex gap-2">
                   <button onClick={() => handleDownload(viewing)} className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/60 text-xs transition-colors cursor-pointer">Download PDF</button>
                   <Link href={`/dashboard/invoices/new?clone=${viewing.id}`} className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/60 text-xs transition-colors">Clone</Link>
+                  <button onClick={() => handleDelete(viewing.id)} className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs transition-colors cursor-pointer">Delete</button>
                   <button onClick={() => setViewing(null)} className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/40 text-xs transition-colors cursor-pointer">Close</button>
                 </div>
               </div>
@@ -100,6 +109,9 @@ function InvoicesList() {
                   <Link href={`/dashboard/invoices/new?clone=${inv.id}`} className="p-1.5 text-white/15 hover:text-white/50 transition-colors" title="Clone">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                   </Link>
+                  <button onClick={() => handleDelete(inv.id)} className="p-1.5 text-white/15 hover:text-red-300 transition-colors cursor-pointer" title="Delete">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" /></svg>
+                  </button>
                 </div>
               </div>
             </motion.div>

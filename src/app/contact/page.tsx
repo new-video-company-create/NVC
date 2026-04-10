@@ -14,11 +14,11 @@ const fadeUp = {
 };
 
 const services = [
-  { id: "mgmt", label: "Artist Management", icon: "🎤" },
-  { id: "marketing", label: "Music Marketing", icon: "📈" },
-  { id: "creative", label: "Creative / Video", icon: "🎬" },
-  { id: "consulting", label: "Consulting Call", icon: "💡" },
-  { id: "other", label: "Other", icon: "✉️" },
+  { id: "mgmt", label: "Artist Management" },
+  { id: "marketing", label: "Music Marketing" },
+  { id: "creative", label: "Creative / Video" },
+  { id: "consulting", label: "Consulting Call" },
+  { id: "other", label: "Other" },
 ];
 
 const timeSlots = [
@@ -166,7 +166,6 @@ export default function ContactPage() {
                 <div className="grid grid-cols-1 gap-2">
                   {services.map((s) => (
                     <button key={s.id} onClick={() => setForm({ ...form, service: s.id })} className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-300 cursor-pointer flex items-center gap-3 ${form.service === s.id ? "bg-white/[0.06] border-white/20 text-white/90" : "bg-white/[0.02] border-white/[0.04] text-white/40 hover:bg-white/[0.04] hover:text-white/60"}`}>
-                      <span className="text-lg">{s.icon}</span>
                       <span className="text-sm">{s.label}</span>
                     </button>
                   ))}
