@@ -4,23 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { getInvoices, getArtists, type Invoice, type Artist } from "@/lib/storage";
+import { getInvoices, getArtists, calcInvoiceTotal, FMT, type Invoice, type Artist } from "@/lib/storage";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
+    opacity: 1, y: 0,
     transition: { delay: i * 0.08, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const },
   }),
 };
-
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
-
-function invoiceTotal(inv: Invoice) {
-  return inv.lineItems.reduce((s, li) => s + (parseFloat(li.amount.replace(/[^0-9.]/g, "")) || 0), 0);
-}
 
 const quickActions = [
   { title: "New Invoice", description: "Generate and send a client invoice", href: "/dashboard/invoices/new", icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg> },
@@ -40,19 +32,18 @@ export default function DashboardOverview() {
 
   const openInvoices = invoices.filter((i) => i.status === "pending" || i.status === "draft");
   const paidInvoices = invoices.filter((i) => i.status === "paid");
-  const openTotal = openInvoices.reduce((s, i) => s + invoiceTotal(i), 0);
-  const paidTotal = paidInvoices.reduce((s, i) => s + invoiceTotal(i), 0);
+  const openTotal = openInvoices.reduce((s, i) => s + calcInvoiceTotal(i).total, 0);
+  const paidTotal = paidInvoices.reduce((s, i) => s + calcInvoiceTotal(i).total, 0);
 
   const stats = [
-    { label: "Open Invoices", value: String(openInvoices.length), sub: `${formatCurrency(openTotal)} outstanding` },
-    { label: "Paid This Month", value: formatCurrency(paidTotal), sub: `${paidInvoices.length} invoices` },
+    { label: "Open Invoices", value: String(openInvoices.length), sub: `${FMT.format(openTotal)} outstanding` },
+    { label: "Paid This Month", value: FMT.format(paidTotal), sub: `${paidInvoices.length} invoices` },
     { label: "Active Artists", value: String(artists.filter((a) => a.status === "active").length), sub: `${artists.length} total` },
     { label: "Meetings This Week", value: "5", sub: "2 transcribed" },
   ];
 
   return (
     <div className="space-y-8">
-      {/* Welcome with Tru logo */}
       <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="flex items-center gap-4">
         <Image src="/tru-logo.png" alt="Tru Management" width={48} height={48} className="rounded-xl" />
         <div>
@@ -61,7 +52,6 @@ export default function DashboardOverview() {
         </div>
       </motion.div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
           <motion.div key={stat.label} custom={i + 1} variants={fadeUp} initial="hidden" animate="visible" className="glass rounded-2xl p-4">
@@ -72,23 +62,18 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* Quick Actions */}
       <motion.div custom={5} variants={fadeUp} initial="hidden" animate="visible">
         <h2 className="text-white/25 text-[10px] uppercase tracking-[0.3em] mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action) => (
-            <Link key={action.title} href={action.href} className="glass glass-hover rounded-2xl p-5 flex flex-col gap-3 transition-all duration-500 group">
-              <span className="text-white/30 group-hover:text-white/60 transition-colors">{action.icon}</span>
-              <div>
-                <p className="text-white/80 text-sm font-medium group-hover:text-white transition-colors">{action.title}</p>
-                <p className="text-white/20 text-xs mt-0.5">{action.description}</p>
-              </div>
+          {quickActions.map((a) => (
+            <Link key={a.title} href={a.href} className="glass glass-hover rounded-2xl p-5 flex flex-col gap-3 transition-all duration-500 group">
+              <span className="text-white/30 group-hover:text-white/60 transition-colors">{a.icon}</span>
+              <div><p className="text-white/80 text-sm font-medium group-hover:text-white transition-colors">{a.title}</p><p className="text-white/20 text-xs mt-0.5">{a.description}</p></div>
             </Link>
           ))}
         </div>
       </motion.div>
 
-      {/* Recent Invoices */}
       <motion.div custom={6} variants={fadeUp} initial="hidden" animate="visible">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white/25 text-[10px] uppercase tracking-[0.3em]">Recent Invoices</h2>
@@ -97,12 +82,9 @@ export default function DashboardOverview() {
         <div className="glass rounded-2xl overflow-hidden">
           {invoices.slice(0, 5).map((inv, i) => (
             <div key={inv.id} className={`flex items-center justify-between px-5 py-4 ${i < Math.min(invoices.length, 5) - 1 ? "border-b border-white/[0.04]" : ""}`}>
-              <div>
-                <p className="text-white/70 text-sm font-medium">{inv.billToName}</p>
-                <p className="text-white/25 text-xs">INV-{inv.invoiceNumber} &middot; {new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
-              </div>
+              <div><p className="text-white/70 text-sm font-medium">{inv.billToName}</p><p className="text-white/25 text-xs">#{inv.invoiceNumber} &middot; {new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p></div>
               <div className="flex items-center gap-4">
-                <span className="text-white/70 text-sm font-medium">{formatCurrency(invoiceTotal(inv))}</span>
+                <span className="text-white/70 text-sm font-medium">{FMT.format(calcInvoiceTotal(inv).total)}</span>
                 <span className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full ${inv.status === "paid" ? "bg-emerald-500/10 text-emerald-400/80" : inv.status === "pending" ? "bg-amber-500/10 text-amber-400/80" : "bg-white/[0.04] text-white/30"}`}>{inv.status}</span>
               </div>
             </div>
