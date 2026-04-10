@@ -81,8 +81,8 @@ export default function RosterPage() {
               className={`w-full text-left glass rounded-2xl p-4 transition-all duration-300 cursor-pointer ${selected?.id === artist.id ? "border-white/20 bg-white/[0.06]" : "glass-hover"}`}
             >
               <div className="flex items-center gap-3">
-                {artist.spotifyImageUrl ? (
-                  <img src={artist.spotifyImageUrl} alt={artist.stageName} className="w-10 h-10 rounded-full object-cover" />
+                {(artist.spotifyImageUrl || artist.imageUrl) ? (
+                  <img src={artist.spotifyImageUrl || artist.imageUrl} alt={artist.stageName} className="w-10 h-10 rounded-full object-cover" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
                     <span className="text-white/50 text-sm font-bold">{artist.stageName[0]}</span>
@@ -106,8 +106,8 @@ export default function RosterPage() {
             <motion.div key={selected.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6 space-y-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                  {selected.spotifyImageUrl ? (
-                    <img src={selected.spotifyImageUrl} alt={selected.stageName} className="w-16 h-16 rounded-2xl object-cover" />
+                  {(selected.spotifyImageUrl || selected.imageUrl) ? (
+                    <img src={selected.spotifyImageUrl || selected.imageUrl} alt={selected.stageName} className="w-16 h-16 rounded-2xl object-cover" />
                   ) : (
                     <div className="w-16 h-16 rounded-2xl bg-white/[0.06] flex items-center justify-center">
                       <span className="text-white/40 text-2xl font-bold">{selected.stageName[0]}</span>

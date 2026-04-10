@@ -179,7 +179,7 @@ const defaultArtists: Artist[] = [
     id: "artist-saego", name: "Saego", stageName: "Saego", genre: "Hip-Hop / R&B",
     email: "", phone: "", instagram: "https://www.instagram.com/1saego/", spotify: "", website: "",
     bio: "Rising artist blending melodic hip-hop with R&B influences. Building a strong following through authentic storytelling and viral social media presence.",
-    monthlyListeners: "—", status: "active", createdAt: "2026-01-15T00:00:00Z",
+    monthlyListeners: "—", imageUrl: "/artist-saego.jpg", status: "active", createdAt: "2026-01-15T00:00:00Z",
   },
   {
     id: "artist-shockface", name: "Shöckface", stageName: "Shöckface", genre: "Electronic / Bass",
@@ -193,6 +193,6 @@ const defaultArtists: Artist[] = [
     id: "artist-kidtrunks", name: "Kid Trunks", stageName: "Kid Trunks", genre: "Hip-Hop / Rap",
     email: "", phone: "", instagram: "https://www.instagram.com/kidtrunks/", spotify: "", website: "",
     bio: "South Florida rapper and member of Members Only collective. Known for his association with XXXTENTACION and Ski Mask the Slump God. Brings raw energy and versatility to every track.",
-    monthlyListeners: "—", status: "active", createdAt: "2025-11-01T00:00:00Z",
+    monthlyListeners: "—", imageUrl: "/artist-kidtrunks.jpg", status: "active", createdAt: "2025-11-01T00:00:00Z",
   },
 ];

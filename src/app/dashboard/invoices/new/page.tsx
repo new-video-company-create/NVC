@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { saveInvoice, getInvoiceById, getInvoices, calcSubtotal, calcInvoiceTotal, FMT, type Invoice, type InvoiceLineItem } from "@/lib/storage";
+import { saveInvoice, getInvoiceById, getInvoices, calcInvoiceTotal, FMT, type Invoice, type InvoiceLineItem } from "@/lib/storage";
+import { downloadInvoicePDF } from "@/lib/invoice-pdf";
 
 const BRAND_COLORS = [
   { label: "White", value: "#ffffff" },
@@ -107,8 +108,7 @@ function InvoiceBuilder() {
   };
 
   const handleDownloadPDF = () => {
-    const inv = buildInvoice("pending");
-    openPrintableInvoice(inv);
+    downloadInvoicePDF(buildInvoice("pending"));
   };
 
   const ic = "w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors";
@@ -348,61 +348,6 @@ function InvoicePreview({ invoice }: { invoice: Invoice }) {
       {invoice.notes && <div className="bg-white/[0.02] rounded-xl p-4"><p className="text-white/25 text-[10px] uppercase tracking-[0.2em] mb-1">Notes</p><p className="text-white/50 text-xs">{invoice.notes}</p></div>}
     </motion.div>
   );
-}
-
-function openPrintableInvoice(inv: Invoice) {
-  const totals = calcInvoiceTotal(inv);
-  const accent = inv.brandColor || "#ffffff";
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<!DOCTYPE html><html><head><title>Invoice ${inv.invoiceNumber} — Tru Management</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;background:#000;color:#fff;padding:48px 56px;max-width:800px;margin:0 auto}
-@media print{body{background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:28px}
-.company{font-size:24px;font-weight:700;color:${accent};margin-bottom:6px}
-.meta{color:rgba(255,255,255,0.4);font-size:12px;line-height:1.6}
-.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px}
-.field-label{font-size:9px;text-transform:uppercase;letter-spacing:0.2em;color:rgba(255,255,255,0.25);margin-bottom:4px}
-.field-value{font-size:13px;color:rgba(255,255,255,0.8)}
-.scope{margin-bottom:24px}
-.scope p{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6}
-table{width:100%;border-collapse:collapse;margin-bottom:24px}
-th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.15em;color:rgba(255,255,255,0.25);padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.08)}
-th:last-child,td:last-child{text-align:right}
-th:nth-child(2),td:nth-child(2){text-align:center}
-th:nth-child(3),td:nth-child(3){text-align:right}
-td{font-size:13px;color:rgba(255,255,255,0.6);padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
-td:last-child{color:rgba(255,255,255,0.8);font-weight:500}
-.totals{text-align:right;margin-bottom:28px}
-.totals .row{display:flex;justify-content:flex-end;gap:40px;padding:4px 0;font-size:13px}
-.totals .row .label{color:rgba(255,255,255,0.3)}
-.totals .row .value{color:rgba(255,255,255,0.6);min-width:100px}
-.totals .total-row{border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;margin-top:8px}
-.totals .total-row .label{color:${accent};font-weight:600;font-size:14px}
-.totals .total-row .value{color:#fff;font-weight:700;font-size:20px}
-.notes{background:rgba(255,255,255,0.02);border-radius:8px;padding:16px;margin-bottom:28px}
-.notes-label{font-size:9px;text-transform:uppercase;letter-spacing:0.2em;color:rgba(255,255,255,0.2);margin-bottom:4px}
-.notes-text{font-size:11px;color:rgba(255,255,255,0.4)}
-.banking{border-top:1px solid rgba(255,255,255,0.06);padding-top:20px}
-.banking h3{font-size:9px;text-transform:uppercase;letter-spacing:0.2em;color:rgba(255,255,255,0.2);margin-bottom:12px}
-.banking-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
-.banking-grid .bl{color:rgba(255,255,255,0.25)}.banking-grid .bv{color:rgba(255,255,255,0.5)}
-.footer{margin-top:32px;text-align:center;font-size:10px;color:rgba(255,255,255,0.15)}
-</style></head><body>
-<div class="header"><div><div class="company">Tru Management</div><div class="meta">Joe Meyer | 508-864-7360 | Joe@trumgmt.org<br>5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</div></div></div>
-<div class="grid"><div><div class="field-label">Invoice No</div><div class="field-value" style="font-family:monospace">${inv.invoiceNumber}</div></div><div><div class="field-label">Issue Date</div><div class="field-value">${new Date(inv.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div></div><div><div class="field-label">Due Date</div><div class="field-value">${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Upon Receipt"}</div></div></div>
-<div class="grid" style="grid-template-columns:1fr"><div><div class="field-label">Bill To</div><div class="field-value">${inv.billToName}<br><span style="color:rgba(255,255,255,0.4);font-size:12px">${inv.billToAddress}</span></div></div></div>
-${inv.campaignScope ? `<div class="scope"><div class="field-label" style="margin-bottom:8px">Campaign Scope</div><p>${inv.campaignScope}</p></div>` : ""}
-<table><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${inv.lineItems.filter(li => li.description).map(li => `<tr><td>${li.description}</td><td>${li.quantity}</td><td>$${parseFloat(li.rate).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td><td>$${parseFloat(li.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td></tr>`).join("")}</tbody></table>
-<div class="totals"><div class="row"><span class="label">Subtotal</span><span class="value">$${totals.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>${inv.discountEnabled && totals.discount > 0 ? `<div class="row"><span class="label">Discount</span><span class="value" style="color:#e76f51">-$${totals.discount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>` : ""}${inv.taxEnabled ? `<div class="row"><span class="label">${inv.taxLabel} (${inv.taxRate}%)</span><span class="value">$${totals.tax.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>` : ""}<div class="row total-row"><span class="label">FINAL TOTAL DUE</span><span class="value">$${totals.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div></div>
-${inv.notes ? `<div class="notes"><div class="notes-label">Notes</div><div class="notes-text">${inv.notes}</div></div>` : ""}
-<div class="banking"><h3>Banking & Payment Information</h3><div class="banking-grid"><div><span class="bl">Bank: </span><span class="bv">TD Bank</span></div><div><span class="bl">Account: </span><span class="bv">Joseph Meyer</span></div><div><span class="bl">Routing: </span><span class="bv">211370545</span></div><div><span class="bl">Account #: </span><span class="bv">00003275633359</span></div><div><span class="bl">Swift: </span><span class="bv">NRTHUS33XXX</span></div><div><span class="bl">Bank Addr: </span><span class="bv">200 Boston Tpke, Shrewsbury, MA 01545</span></div></div></div>
-<div class="footer">For questions contact Joe Meyer at 508-864-7360 or Joe@trumgmt.org</div>
-</body></html>`);
-  w.document.close();
-  setTimeout(() => w.print(), 300);
 }
 
 export default function NewInvoicePage() {
