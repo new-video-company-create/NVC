@@ -8,15 +8,31 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Portal = "admin" | "client" | null;
 
+const CREDENTIALS = {
+  admin: { email: "admin@newvideocompany.com", password: "nvc2026" },
+  client: { email: "joe@trumgmt.org", password: "tru2026" },
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [portal, setPortal] = useState<Portal>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    if (!portal) return;
+    const creds = CREDENTIALS[portal];
+
+    if (email.toLowerCase() !== creds.email || password !== creds.password) {
+      setError("Invalid email or password");
+      return;
+    }
+
     setLoading(true);
     setTimeout(() => {
       if (portal === "admin") {
@@ -143,6 +159,16 @@ export default function LoginPage() {
                     placeholder="••••••••"
                   />
                 </div>
+
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-400/80 text-xs text-center bg-red-500/5 border border-red-500/10 rounded-lg py-2"
+                  >
+                    {error}
+                  </motion.p>
+                )}
 
                 <button
                   type="submit"
