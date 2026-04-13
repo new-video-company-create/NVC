@@ -97,3 +97,29 @@ export async function searchArtist(query: string): Promise<SpotifyArtistData | n
 export async function getMultipleArtists(queries: string[]): Promise<(SpotifyArtistData | null)[]> {
   return Promise.all(queries.map((q) => searchArtist(q)));
 }
+
+/** For /api/spotify/health — does not expose tokens. */
+export async function getSpotifyConnectionStatus(): Promise<{
+  configured: boolean;
+  tokenOk: boolean;
+  error?: string;
+}> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return {
+      configured: false,
+      tokenOk: false,
+      error: "Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET (Vercel → Settings → Environment Variables).",
+    };
+  }
+  const token = await getAccessToken();
+  if (!token) {
+    return {
+      configured: true,
+      tokenOk: false,
+      error: "Credentials present but Spotify returned no token — verify Client ID/Secret in the Developer Dashboard.",
+    };
+  }
+  return { configured: true, tokenOk: true };
+}
