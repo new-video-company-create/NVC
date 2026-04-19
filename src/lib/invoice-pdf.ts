@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { calcInvoiceTotal, FMT, type Invoice } from "./storage";
+import { NVC_COMPANY, NVC_EMAIL, NVC_TAGLINE } from "./nvc-brand";
 
 const $ = (n: number) => FMT.format(n);
 
@@ -21,15 +22,15 @@ export function downloadInvoicePDF(inv: Invoice) {
   doc.setTextColor(...accent);
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.text("Tru Management", margin, y);
+  doc.text(NVC_COMPANY, margin, y);
   y += 18;
 
   doc.setTextColor(...white(0.4));
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Joe Meyer | 508-864-7360 | Joe@trumgmt.org", margin, y);
+  doc.text(NVC_EMAIL, margin, y);
   y += 13;
-  doc.text("5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024", margin, y);
+  doc.text(NVC_TAGLINE, margin, y);
   y += 24;
 
   // Divider
@@ -158,39 +159,31 @@ export function downloadInvoicePDF(inv: Invoice) {
     y += 58;
   }
 
-  // Banking
+  // Payment
   y += 8;
   doc.setDrawColor(...white(0.06));
   doc.line(margin, y, W - margin, y);
   y += 18;
-  drawLabel(doc, margin, y, "BANKING & PAYMENT INFORMATION", white);
+  drawLabel(doc, margin, y, "PAYMENT", white);
   y += 16;
 
   doc.setFontSize(8.5);
-  const bankData = [
-    ["Bank:", "TD Bank", "Account Name:", "Joseph Meyer"],
-    ["Routing:", "211370545", "Account #:", "00003275633359"],
-    ["Swift:", "NRTHUS33XXX", "Bank Address:", "200 Boston Tpke, Shrewsbury, MA 01545"],
-  ];
-  for (const row of bankData) {
-    doc.setTextColor(...white(0.25));
-    doc.text(row[0], margin, y);
-    doc.setTextColor(...white(0.5));
-    doc.text(row[1], margin + 55, y);
-    doc.setTextColor(...white(0.25));
-    doc.text(row[2], margin + contentW * 0.5, y);
-    doc.setTextColor(...white(0.5));
-    doc.text(row[3], margin + contentW * 0.5 + 75, y);
-    y += 14;
-  }
+  doc.setTextColor(...white(0.45));
+  doc.setFont("helvetica", "normal");
+  const payLines = doc.splitTextToSize(
+    "Card payments: use the public invoice link from NVC Portal (Stripe Checkout). ACH / wire: available on request.",
+    contentW,
+  );
+  doc.text(payLines, margin, y);
+  y += payLines.length * 12 + 8;
 
   // Footer
-  y += 16;
+  y += 8;
   doc.setTextColor(...white(0.15));
   doc.setFontSize(7.5);
-  doc.text("For questions contact Joe Meyer at 508-864-7360 or Joe@trumgmt.org", W / 2, y, { align: "center" });
+  doc.text(`Questions: ${NVC_EMAIL}`, W / 2, y, { align: "center" });
 
-  doc.save(`Invoice-${inv.invoiceNumber}-${inv.billToName?.replace(/\s+/g, "_") || "TruMgmt"}.pdf`);
+  doc.save(`Invoice-${inv.invoiceNumber}-${inv.billToName?.replace(/\s+/g, "_") || "NVC"}.pdf`);
 }
 
 function drawLabel(doc: jsPDF, x: number, y: number, text: string, white: (a: number) => [number, number, number]) {

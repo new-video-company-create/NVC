@@ -7,6 +7,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { saveInvoice, getInvoiceById, getInvoices, calcInvoiceTotal, FMT, type Invoice, type InvoiceLineItem } from "@/lib/storage";
 import { downloadInvoicePDF } from "@/lib/invoice-pdf";
+import { NVC_COMPANY, NVC_EMAIL, NVC_TAGLINE } from "@/lib/nvc-brand";
 
 const BRAND_COLORS = [
   { label: "White", value: "#ffffff" },
@@ -152,11 +153,11 @@ function InvoiceBuilder() {
           <div className="glass rounded-2xl p-6">
             <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-4">From</h3>
             <div className="flex items-start gap-4">
-              <Image src="/tru-logo.png" alt="Tru" width={40} height={40} className="rounded-lg mt-0.5" />
+              <Image src="/nvc-logo.png" alt="NVC" width={40} height={40} className="rounded-lg mt-0.5 opacity-95" />
               <div className="text-white/60 text-sm space-y-1">
-                <p className="text-white/80 font-medium">Tru Management</p>
-                <p>Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
-                <p>5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</p>
+                <p className="text-white/80 font-medium">{NVC_COMPANY}</p>
+                <p>{NVC_TAGLINE}</p>
+                <p>{NVC_EMAIL}</p>
               </div>
             </div>
           </div>
@@ -274,17 +275,12 @@ function InvoiceBuilder() {
             <textarea className={`${ic} min-h-[60px] resize-none`} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
-          {/* Banking */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-4">Banking &amp; Payment</h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-white/25">Bank:</span> <span className="text-white/60">TD Bank</span></div>
-              <div><span className="text-white/25">Account Name:</span> <span className="text-white/60">Joseph Meyer</span></div>
-              <div><span className="text-white/25">Routing:</span> <span className="text-white/60">211370545</span></div>
-              <div><span className="text-white/25">Account #:</span> <span className="text-white/60">00003275633359</span></div>
-              <div><span className="text-white/25">Swift:</span> <span className="text-white/60">NRTHUS33XXX</span></div>
-              <div><span className="text-white/25">Bank Address:</span> <span className="text-white/60">200 Boston Tpke, Shrewsbury, MA 01545</span></div>
-            </div>
+          {/* Payment */}
+          <div className="glass rounded-2xl p-6 border border-[#635BFF]/15">
+            <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-3">Payment</h3>
+            <p className="text-white/50 text-sm leading-relaxed">
+              After you save an invoice, copy its public link from the invoice list. Clients can pay by card on that page via Stripe Checkout (test cards work in test mode).
+            </p>
           </div>
 
           {/* Actions */}
@@ -307,11 +303,11 @@ function InvoicePreview({ invoice }: { invoice: Invoice }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-2xl p-8 space-y-7">
       <div className="flex items-start justify-between pb-6 border-b border-white/[0.06]">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: accent }}>Tru Management</h2>
-          <p className="text-white/40 text-sm mt-1">Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
-          <p className="text-white/30 text-sm">5720 Lunsford Rd. Apt. 3236, Plano, TX, 75024</p>
+          <h2 className="text-2xl font-bold" style={{ color: accent }}>{NVC_COMPANY}</h2>
+          <p className="text-white/40 text-sm mt-1">{NVC_EMAIL}</p>
+          <p className="text-white/30 text-sm">{NVC_TAGLINE}</p>
         </div>
-        <Image src="/tru-logo.png" alt="Tru" width={56} height={56} className="rounded-xl" />
+        <Image src="/nvc-logo.png" alt="NVC" width={56} height={56} className="rounded-xl opacity-95" />
       </div>
       <div className="grid grid-cols-3 gap-6">
         <div><p className="text-white/25 text-[10px] uppercase tracking-[0.2em] mb-1">Invoice</p><p className="text-white/80 text-sm font-mono">{invoice.invoiceNumber}</p></div>

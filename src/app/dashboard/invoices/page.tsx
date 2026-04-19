@@ -7,12 +7,15 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { deleteInvoice, getInvoices, getInvoiceById, calcInvoiceTotal, FMT, type Invoice } from "@/lib/storage";
 import { downloadInvoicePDF } from "@/lib/invoice-pdf";
+import { encodeInvoiceToken, invoiceToSnapshot, publicInvoiceUrl } from "@/lib/invoice-public";
+import { NVC_COMPANY, NVC_EMAIL } from "@/lib/nvc-brand";
 
 function InvoicesList() {
   const searchParams = useSearchParams();
   const viewId = searchParams.get("view");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [viewing, setViewing] = useState<Invoice | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     const all = getInvoices();
@@ -24,6 +27,16 @@ function InvoicesList() {
   }, [viewId]);
 
   const handleDownload = (inv: Invoice) => downloadInvoicePDF(inv);
+
+  const copyPublicLink = (inv: Invoice) => {
+    const token = encodeInvoiceToken(invoiceToSnapshot(inv));
+    const url = publicInvoiceUrl(token);
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(inv.id);
+      window.setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
   const handleDelete = (id: string) => {
     const ok = window.confirm("Delete this invoice? This action cannot be undone.");
     if (!ok) return;
@@ -37,7 +50,7 @@ function InvoicesList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/tru-logo.png" alt="Tru" width={32} height={32} className="rounded-lg" />
+          <Image src="/nvc-logo.png" alt="NVC" width={32} height={32} className="rounded-lg opacity-90" />
           <div>
             <h1 className="text-xl font-medium text-white/90">Invoices</h1>
             <p className="text-white/30 text-sm mt-1">{invoices.length} invoices</p>
@@ -56,10 +69,11 @@ function InvoicesList() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} onClick={(e) => e.stopPropagation()} className="glass rounded-2xl p-8 max-w-2xl w-full space-y-6">
               <div className="flex items-start justify-between pb-5 border-b border-white/[0.06]">
                 <div>
-                  <h2 className="text-2xl font-bold" style={{ color: viewing.brandColor || "#fff" }}>Tru Management</h2>
-                  <p className="text-white/40 text-sm mt-1">Joe Meyer | 508-864-7360 | Joe@trumgmt.org</p>
+                  <h2 className="text-2xl font-bold" style={{ color: viewing.brandColor || "#fff" }}>{NVC_COMPANY}</h2>
+                  <p className="text-white/40 text-sm mt-1">{NVC_EMAIL}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => copyPublicLink(viewing)} className="px-3 py-1.5 rounded-lg bg-[#635BFF]/20 hover:bg-[#635BFF]/30 text-[#c4b5fd] text-xs transition-colors cursor-pointer">{copiedId === viewing.id ? "Copied" : "Copy pay link"}</button>
                   <button onClick={() => handleDownload(viewing)} className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/60 text-xs transition-colors cursor-pointer">Download PDF</button>
                   <Link href={`/dashboard/invoices/new?clone=${viewing.id}`} className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/60 text-xs transition-colors">Clone</Link>
                   <button onClick={() => handleDelete(viewing.id)} className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs transition-colors cursor-pointer">Delete</button>
@@ -103,6 +117,13 @@ function InvoicesList() {
                 <span className="text-white/70 text-sm font-medium">{FMT.format(totals.total)}</span>
                 <span className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full ${inv.status === "paid" ? "bg-emerald-500/10 text-emerald-400/80" : inv.status === "pending" ? "bg-amber-500/10 text-amber-400/80" : "bg-white/[0.04] text-white/30"}`}>{inv.status}</span>
                 <div className="flex gap-1">
+                  <button type="button" onClick={() => copyPublicLink(inv)} className="p-1.5 text-white/15 hover:text-[#a99ffb] transition-colors cursor-pointer" title={copiedId === inv.id ? "Copied" : "Copy public pay link"}>
+                    {copiedId === inv.id ? (
+                      <span className="text-[10px] text-emerald-400/80 font-medium">OK</span>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    )}
+                  </button>
                   <button onClick={() => handleDownload(inv)} className="p-1.5 text-white/15 hover:text-white/50 transition-colors cursor-pointer" title="Download PDF">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   </button>
