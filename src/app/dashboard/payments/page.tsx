@@ -2,13 +2,23 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+
+type StripeHealth = { ok: boolean; configured: boolean; mode?: string; hint?: string };
 
 export default function PaymentsHubPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUrl, setLastUrl] = useState<string | null>(null);
+  const [health, setHealth] = useState<StripeHealth | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stripe/health", { cache: "no-store" })
+      .then((r) => r.json())
+      .then(setHealth)
+      .catch(() => setHealth({ ok: false, configured: false, hint: "Could not reach /api/stripe/health" }));
+  }, []);
 
   const runTestCheckout = async () => {
     setError(null);
@@ -49,6 +59,39 @@ export default function PaymentsHubPage() {
           <p className="text-white/30 text-sm mt-1">Stripe checkout — test mode</p>
         </div>
       </div>
+
+      {health && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            health.configured && health.ok
+              ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-400/90"
+              : "border-amber-500/25 bg-amber-500/5 text-amber-200/80"
+          }`}
+        >
+          {health.configured && health.ok ? (
+            <p>
+              Stripe secret key is set ({health.mode === "test" ? "test" : health.mode === "live" ? "live" : "unknown"} mode). You can run the test checkout below.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p className="font-medium text-white/80">Stripe is not configured on the server yet.</p>
+              <ol className="list-decimal list-inside space-y-1 text-white/55 text-xs leading-relaxed">
+                <li>Open Stripe Dashboard → Developers → API keys.</li>
+                <li>Copy the Secret key (starts with sk_test_ for testing).</li>
+                <li>
+                  Local: add to <code className="text-white/70">.env.local</code> as{" "}
+                  <code className="text-white/70">STRIPE_SECRET_KEY=sk_test_…</code>
+                </li>
+                <li>
+                  Vercel: Project → Settings → Environment Variables → add <code className="text-white/70">STRIPE_SECRET_KEY</code> → Redeploy.
+                </li>
+                <li>Optional: set <code className="text-white/70">NEXT_PUBLIC_APP_URL=https://your-domain.com</code> for redirect URLs.</li>
+              </ol>
+              {health.hint ? <p className="text-white/40 text-xs pt-1">{health.hint}</p> : null}
+            </div>
+          )}
+        </div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}

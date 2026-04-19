@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -18,6 +18,7 @@ const services = [
   { id: "marketing", label: "Music Marketing" },
   { id: "creative", label: "Creative / Video" },
   { id: "consulting", label: "Consulting Call" },
+  { id: "portal", label: "Portal access / password help" },
   { id: "other", label: "Other" },
 ];
 
@@ -43,6 +44,8 @@ function getNext14Days(): { date: Date; label: string; dayName: string; dayNum: 
   return days;
 }
 
+type PortalTopic = "access" | "reset" | "portal" | null;
+
 export default function ContactPage() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -51,8 +54,27 @@ export default function ContactPage() {
     date: "", time: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitKind, setSubmitKind] = useState<"call" | "portal">("call");
+  const [portalTopic, setPortalTopic] = useState<PortalTopic>(null);
 
   const days = getNext14Days();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const topic = q.get("topic");
+    if (topic === "access" || topic === "reset" || topic === "portal") {
+      setPortalTopic(topic);
+      setForm((f) => ({
+        ...f,
+        service: "portal",
+        message:
+          topic === "reset"
+            ? "I need help with my NVC Portal password (reset or access issue)."
+            : "I would like to request access to the NVC Portal (new account).",
+      }));
+    }
+  }, []);
 
   const canProceed = () => {
     if (step === 0) return form.name && form.email;
@@ -63,8 +85,24 @@ export default function ContactPage() {
 
   const handleSubmit = () => {
     const existing = JSON.parse(localStorage.getItem("nvc_contact_submissions") || "[]");
-    existing.unshift({ ...form, submittedAt: new Date().toISOString(), id: `contact-${Date.now()}` });
+    existing.unshift({ ...form, submittedAt: new Date().toISOString(), id: `contact-${Date.now()}`, kind: "call" });
     localStorage.setItem("nvc_contact_submissions", JSON.stringify(existing));
+    setSubmitKind("call");
+    setSubmitted(true);
+  };
+
+  const handlePortalOnlySubmit = () => {
+    const existing = JSON.parse(localStorage.getItem("nvc_contact_submissions") || "[]");
+    existing.unshift({
+      ...form,
+      service: "portal",
+      submittedAt: new Date().toISOString(),
+      id: `portal-req-${Date.now()}`,
+      kind: "portal",
+      portalTopic: portalTopic ?? "portal",
+    });
+    localStorage.setItem("nvc_contact_submissions", JSON.stringify(existing));
+    setSubmitKind("portal");
     setSubmitted(true);
   };
 
@@ -81,16 +119,39 @@ export default function ContactPage() {
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-emerald-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" /></svg>
             </div>
-            <h1 className="text-2xl font-semibold text-white/90 mb-3">You&apos;re booked.</h1>
-            <p className="text-white/40 text-sm mb-2">
-              {form.date} at {form.time}
-            </p>
-            <p className="text-white/25 text-sm mb-8">
-              We&apos;ll send a confirmation to <span className="text-white/50">{form.email}</span> with meeting details.
-            </p>
-            <Link href="/" className="text-white/30 hover:text-white/60 text-xs uppercase tracking-[0.2em] transition-colors">
-              Back to Home
-            </Link>
+            {submitKind === "portal" ? (
+              <>
+                <h1 className="text-2xl font-semibold text-white/90 mb-3">Request received</h1>
+                <p className="text-white/40 text-sm mb-4">
+                  We&apos;ll follow up at <span className="text-white/60">{form.email}</span> about NVC Portal access or password help.
+                </p>
+                <p className="text-white/25 text-xs mb-8 leading-relaxed">
+                  This form saves locally in your browser for demo purposes — also email{" "}
+                  <a href="mailto:hello@newvideocompany.com" className="text-white/45 hover:text-white/70 underline">
+                    hello@newvideocompany.com
+                  </a>{" "}
+                  so nothing is missed.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-semibold text-white/90 mb-3">You&apos;re booked.</h1>
+                <p className="text-white/40 text-sm mb-2">
+                  {form.date} at {form.time}
+                </p>
+                <p className="text-white/25 text-sm mb-8">
+                  We&apos;ll send a confirmation to <span className="text-white/50">{form.email}</span> with meeting details.
+                </p>
+              </>
+            )}
+            <div className="flex flex-col gap-3">
+              <Link href="/login" className="text-white/35 hover:text-white/60 text-xs uppercase tracking-[0.2em] transition-colors">
+                Back to Portal login
+              </Link>
+              <Link href="/" className="text-white/30 hover:text-white/60 text-xs uppercase tracking-[0.2em] transition-colors">
+                Back to Home
+              </Link>
+            </div>
           </motion.div>
         </div>
       </div>
@@ -121,6 +182,13 @@ export default function ContactPage() {
           <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="text-center mb-10">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-3">Get in Touch</h1>
             <p className="text-white/30 text-sm">Book a call or send us a message — we&apos;ll get back fast.</p>
+            {portalTopic && (
+              <p className="text-white/45 text-sm mt-4 max-w-md mx-auto leading-relaxed border border-white/[0.08] rounded-xl px-4 py-3 bg-white/[0.02]">
+                <span className="text-white/60 font-medium">Portal help:</span>{" "}
+                {portalTopic === "reset" ? "Password / login issue — " : "New access — "}
+                add your details below. You can send the request without booking a call, or continue to schedule.
+              </p>
+            )}
           </motion.div>
 
           {/* Progress */}
@@ -157,6 +225,15 @@ export default function ContactPage() {
                     <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Optional" className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white/90 text-sm placeholder:text-white/15 focus:outline-none focus:border-white/20 transition-colors" />
                   </div>
                 </div>
+                {portalTopic && form.name && form.email && (
+                  <button
+                    type="button"
+                    onClick={handlePortalOnlySubmit}
+                    className="w-full py-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400/90 text-sm transition-colors cursor-pointer"
+                  >
+                    Send portal request only (no call)
+                  </button>
+                )}
               </motion.div>
             )}
 

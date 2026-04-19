@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { NVC_EMAIL } from "@/lib/nvc-brand";
 
 type Portal = "admin" | "client" | null;
 
@@ -98,8 +99,8 @@ export default function LoginPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/90 font-medium text-sm">Tru Management</p>
-                      <p className="text-white/30 text-xs mt-1">Client Dashboard</p>
+                      <p className="text-white/90 font-medium text-sm">NVC Portal</p>
+                      <p className="text-white/30 text-xs mt-1">Client dashboard</p>
                     </div>
                     <svg className="w-4 h-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
@@ -127,10 +128,27 @@ export default function LoginPage() {
               </button>
 
               <h2 className="text-white/90 text-lg font-medium mb-1">
-                {portal === "admin" ? "NVC Admin" : "Tru Management"}
+                {portal === "admin" ? "NVC Admin" : "NVC Portal"}
               </h2>
-              <p className="text-white/30 text-xs mb-8">
-                {portal === "admin" ? "Management Console" : "Client Portal"}
+              <p className="text-white/30 text-xs mb-6">
+                {portal === "admin" ? "Management console" : "Client dashboard"}
+              </p>
+              <p className="text-white/20 text-[10px] leading-relaxed mb-6">
+                No self-service reset yet —{" "}
+                <Link href="/contact?topic=reset" className="text-white/45 hover:text-white/70 underline-offset-2 hover:underline">
+                  password help
+                </Link>
+                {" · "}
+                <Link href="/contact?topic=access" className="text-white/45 hover:text-white/70 underline-offset-2 hover:underline">
+                  request access
+                </Link>
+                {" · "}
+                <a
+                  href={`mailto:${NVC_EMAIL}?subject=${encodeURIComponent("NVC Portal — access or password")}`}
+                  className="text-white/45 hover:text-white/70 underline-offset-2 hover:underline"
+                >
+                  email
+                </a>
               </p>
 
               <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -181,6 +199,9 @@ export default function LoginPage() {
                     "Sign In"
                   )}
                 </button>
+                <p className="text-center text-white/15 text-[10px] mt-4">
+                  Demo logins are fixed in code — not real accounts. Use contact or email for changes.
+                </p>
               </form>
             </motion.div>
           )}
