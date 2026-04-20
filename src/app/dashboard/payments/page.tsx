@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { PaymentsGuide } from "./PaymentsGuide";
 
@@ -21,12 +21,21 @@ export default function PaymentsHubPage() {
   const [itemName, setItemName] = useState("NVC Merch");
   const [note, setNote] = useState("");
 
-  useEffect(() => {
-    fetch("/api/stripe/health", { cache: "no-store" })
+  const refreshHealth = useCallback(() => {
+    fetch(`/api/stripe/health?t=${Date.now()}`, { cache: "no-store" })
       .then((r) => r.json())
       .then(setHealth)
-      .catch(() => setHealth({ ok: false, configured: false, hint: "Could not reach /api/stripe/health" }));
+      .catch(() =>
+        setHealth({ ok: false, configured: false, hint: "Could not reach /api/stripe/health" }),
+      );
   }, []);
+
+  useEffect(() => {
+    refreshHealth();
+    const onFocus = () => refreshHealth();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refreshHealth]);
 
   const runTestCheckout = async () => {
     setError(null);
@@ -255,7 +264,7 @@ export default function PaymentsHubPage() {
       <div className="glass rounded-2xl p-6 space-y-3">
         <h2 className="text-white/40 text-[10px] uppercase tracking-[0.3em]">Invoice hub</h2>
         <p className="text-white/45 text-sm">
-          Same Tru-style workflow: build invoices, copy a public link, client pays in Checkout (card or wallet). PDF download still available.
+          Build invoices, copy a public pay link, and let clients pay in Stripe Checkout (card or wallet). PDF download is still available.
         </p>
         <Link href="/dashboard/invoices" className="inline-flex items-center gap-2 text-emerald-400/70 hover:text-emerald-400 text-sm transition-colors">
           Go to invoices

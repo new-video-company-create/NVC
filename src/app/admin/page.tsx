@@ -18,12 +18,12 @@ const fadeUp = {
 
 const managedClients = [
   {
-    id: "tru",
-    name: "Tru Management",
-    type: "Music management · client workspace",
+    id: "nvc-portal",
+    name: "NVC Portal",
+    type: "Video production workspace",
     href: "/dashboard",
-    logo: "/tru-logo.png",
-    initials: "TM",
+    logo: "/nvc-logo.png",
+    initials: "NVC",
   },
 ];
 
@@ -48,10 +48,10 @@ export default function AdminPage() {
             <div className="h-5 w-px bg-white/[0.08]" />
             <div>
               <p className="text-white/80 text-xs font-medium">NVC Admin</p>
-              <p className="text-white/25 text-[10px]">Management console</p>
+              <p className="text-white/25 text-[10px]">Operations console</p>
             </div>
           </div>
-          <Link href="/login" className="text-white/30 hover:text-white/60 text-[10px] uppercase tracking-[0.2em] transition-colors">
+          <Link href="/logout" className="text-white/30 hover:text-white/60 text-[10px] uppercase tracking-[0.2em] transition-colors">
             Sign Out
           </Link>
         </div>
@@ -120,7 +120,7 @@ export default function AdminPage() {
         <motion.div custom={6} variants={fadeUp} initial="hidden" animate="visible">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white/25 text-[10px] uppercase tracking-[0.3em]">Client portals</h2>
-            <span className="text-white/15 text-[10px]">Tru-style billing runs inside NVC portal</span>
+            <span className="text-white/15 text-[10px]">NVC billing + Stripe payments run in this client portal</span>
           </div>
 
           <div className="glass rounded-2xl overflow-hidden">

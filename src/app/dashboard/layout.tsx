@@ -16,6 +16,20 @@ const navItems = [
     ),
   },
   {
+    label: "Studio",
+    href: "/dashboard/studio",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+        />
+      </svg>
+    ),
+  },
+  {
     label: "Invoices",
     href: "/dashboard/invoices",
     icon: (
@@ -93,7 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <Link
-            href="/login"
+            href="/logout"
             className="text-white/30 hover:text-white/60 text-[10px] uppercase tracking-[0.2em] transition-colors"
           >
             Sign Out
@@ -126,7 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <main className="flex-1 px-5 py-6 md:px-8 md:py-8 max-w-6xl w-full mx-auto">
+      <main className="flex-1 px-5 py-6 md:px-8 md:py-8 max-w-7xl w-full mx-auto">
         {children}
       </main>
 

@@ -9,7 +9,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "NVC — New Video Company",
-  description: "Premium creative services & client management platform",
+  description: "Video production, social content, and campaign operations platform",
 };
 
 export default function RootLayout({

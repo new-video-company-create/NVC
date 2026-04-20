@@ -15,8 +15,8 @@ const fadeUp = {
 
 const clients = [
   {
-    name: "Tru Management",
-    description: "Music Management",
+    name: "NVC Client Portal",
+    description: "Video production workspace",
     href: "/login",
   },
 ];
@@ -113,7 +113,7 @@ export default function Home() {
             animate="visible"
             className="max-w-md text-white/30 text-lg md:text-xl mb-12 tracking-wide"
           >
-            Premium creative services & management platform
+            Video production, social content, and campaign execution
           </motion.p>
 
           <motion.div

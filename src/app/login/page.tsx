@@ -9,11 +9,6 @@ import { NVC_EMAIL } from "@/lib/nvc-brand";
 
 type Portal = "admin" | "client" | null;
 
-const CREDENTIALS = {
-  admin: { email: "admin@newvideocompany.com", password: "nvc2026" },
-  client: { email: "joe@trumgmt.org", password: "tru2026" },
-};
-
 export default function LoginPage() {
   const router = useRouter();
   const [portal, setPortal] = useState<Portal>(null);
@@ -22,26 +17,35 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!portal) return;
-    const creds = CREDENTIALS[portal];
-
-    if (email.toLowerCase() !== creds.email || password !== creds.password) {
-      setError("Invalid email or password");
-      return;
-    }
 
     setLoading(true);
-    setTimeout(() => {
-      if (portal === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          portal,
+          email,
+          password,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string; redirectTo?: string };
+      if (!res.ok || !data.ok) {
+        setError(data.error || "Invalid email or password");
+        return;
       }
-    }, 800);
+      router.push(data.redirectTo || (portal === "admin" ? "/admin" : "/dashboard"));
+      router.refresh();
+    } catch {
+      setError("Login request failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,7 +97,7 @@ export default function LoginPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/90 font-medium text-sm">NVC Admin</p>
-                      <p className="text-white/30 text-xs mt-1">Management Console</p>
+                      <p className="text-white/30 text-xs mt-1">Internal operations</p>
                     </div>
                     <svg className="w-4 h-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
@@ -109,7 +113,7 @@ export default function LoginPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/90 font-medium text-sm">NVC Portal</p>
-                      <p className="text-white/30 text-xs mt-1">Client dashboard</p>
+                      <p className="text-white/30 text-xs mt-1">Production workspace</p>
                     </div>
                     <svg className="w-4 h-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
@@ -141,7 +145,7 @@ export default function LoginPage() {
                 {portal === "admin" ? "NVC Admin" : "NVC Portal"}
               </h2>
               <p className="text-white/30 text-xs mb-6">
-                {portal === "admin" ? "Management console" : "Client dashboard"}
+                {portal === "admin" ? "Internal operations console" : "Client production dashboard"}
               </p>
               <p className="text-white/20 text-[10px] leading-relaxed mb-6">
                 No self-service reset yet —{" "}
@@ -210,7 +214,7 @@ export default function LoginPage() {
                   )}
                 </button>
                 <p className="text-center text-white/15 text-[10px] mt-4">
-                  Demo logins are fixed in code — not real accounts. Use contact or email for changes.
+                  Role-based session cookie is enforced server-side.
                 </p>
               </form>
             </motion.div>

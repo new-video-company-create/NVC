@@ -1,3 +1,5 @@
+import { parseSpotifyArtistIdFromUrl } from "@/lib/spotifyIds";
+
 export interface InvoiceLineItem {
   description: string;
   quantity: number;
@@ -39,6 +41,8 @@ export interface Artist {
   bio: string;
   followers?: number;
   popularity?: number;
+  /** Avg popularity of top 3 tracks (Spotify API — not total streams). */
+  avgTopTrackPopularity?: number;
   spotifyImageUrl?: string;
   spotifyId?: string;
   topTracks?: string[];
@@ -90,6 +94,23 @@ export function saveInvoice(invoice: Invoice) {
 export function deleteInvoice(id: string) {
   const invoices = getInvoices().filter((i) => i.id !== id);
   setItem(INVOICES_KEY, invoices);
+}
+
+/** Parse Spotify artist URL → API id (stable lookup vs name search). */
+export function spotifyUrlToArtistId(url: string): string | null {
+  return parseSpotifyArtistIdFromUrl(url);
+}
+
+/** Prefer saved id or URL id, else search by stage name. */
+export function spotifyLookupUrl(artist: {
+  stageName: string;
+  spotify?: string;
+  spotifyId?: string;
+}): string {
+  const fromUrl = artist.spotify ? spotifyUrlToArtistId(artist.spotify) : null;
+  const id = artist.spotifyId || fromUrl;
+  if (id) return `/api/spotify?id=${encodeURIComponent(id)}`;
+  return `/api/spotify?q=${encodeURIComponent(artist.stageName)}`;
 }
 
 export function getArtists(): Artist[] {

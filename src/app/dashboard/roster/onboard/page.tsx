@@ -77,7 +77,7 @@ export default function OnboardArtistPage() {
           Roster
         </Link>
         <div className="flex items-center gap-3">
-          <Image src="/tru-logo.png" alt="Tru" width={32} height={32} className="rounded-lg" />
+          <Image src="/nvc-logo.png" alt="NVC" width={32} height={32} className="rounded-lg" />
           <h1 className="text-xl font-medium text-white/90">Onboard New Artist</h1>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function OnboardArtistPage() {
           {step === 1 && (
             <div className="glass rounded-2xl p-6 space-y-4">
               <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Schedule Intro Call</h3>
-              <p className="text-white/40 text-sm">Set up an initial meeting with {stageName || "the artist"} to discuss management, goals, and next steps.</p>
+              <p className="text-white/40 text-sm">Set up an initial meeting with {stageName || "the artist"} to discuss project goals, content direction, and next steps.</p>
               <div><label className={labelClass}>Proposed Date & Time</label><input type="datetime-local" className={inputClass} value={callDate} onChange={(e) => setCallDate(e.target.value)} /></div>
               <div><label className={labelClass}>Call Agenda / Notes</label><textarea className={`${inputClass} min-h-[100px] resize-none`} placeholder="Topics to cover: current deals, goals, distribution, social strategy..." value={callNotes} onChange={(e) => setCallNotes(e.target.value)} /></div>
               <div className="bg-white/[0.02] rounded-xl p-4">
@@ -141,7 +141,7 @@ export default function OnboardArtistPage() {
                   <li>• Current distribution & release schedule</li>
                   <li>• Social media presence & growth strategy</li>
                   <li>• Revenue streams & financial goals</li>
-                  <li>• Management expectations & terms</li>
+                  <li>• Production scope expectations & terms</li>
                   <li>• Branding & visual identity</li>
                 </ul>
               </div>
@@ -150,18 +150,18 @@ export default function OnboardArtistPage() {
 
           {step === 2 && (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Management Proposal</h3>
-              <p className="text-white/40 text-sm">Outline the management proposal for {stageName || "the artist"}.</p>
-              <div><label className={labelClass}>Proposal Details</label><textarea className={`${inputClass} min-h-[120px] resize-none`} placeholder="Management terms, commission structure, services included..." value={proposalNotes} onChange={(e) => setProposalNotes(e.target.value)} /></div>
+              <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Production Proposal</h3>
+              <p className="text-white/40 text-sm">Outline the production proposal for {stageName || "the artist"}.</p>
+              <div><label className={labelClass}>Proposal Details</label><textarea className={`${inputClass} min-h-[120px] resize-none`} placeholder="Production scope, timeline, deliverables, and services included..." value={proposalNotes} onChange={(e) => setProposalNotes(e.target.value)} /></div>
               <div className="bg-white/[0.02] rounded-xl p-4">
-                <p className="text-white/25 text-[10px] uppercase tracking-[0.2em] mb-2">Tru Management Services</p>
+                <p className="text-white/25 text-[10px] uppercase tracking-[0.2em] mb-2">NVC Production Services</p>
                 <ul className="text-white/40 text-xs space-y-1.5">
                   <li>• Artist branding & visual identity</li>
-                  <li>• Social media management & growth</li>
+                  <li>• Social growth and channel strategy</li>
                   <li>• Marketing campaign execution</li>
                   <li>• Distribution & release strategy</li>
                   <li>• Booking & tour support</li>
-                  <li>• Financial management & invoicing</li>
+                  <li>• Budget planning & invoicing</li>
                   <li>• Industry networking & A&R connections</li>
                 </ul>
               </div>
@@ -170,7 +170,7 @@ export default function OnboardArtistPage() {
 
           {step === 3 && (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Welcome to Tru Management</h3>
+              <h3 className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-2">Welcome to NVC Production</h3>
               <div className="flex items-center gap-4 bg-white/[0.03] rounded-xl p-5">
                 <div className="w-14 h-14 rounded-2xl bg-white/[0.06] flex items-center justify-center">
                   <span className="text-white/40 text-xl font-bold">{(stageName || "?")[0]}</span>
@@ -182,7 +182,7 @@ export default function OnboardArtistPage() {
               </div>
               <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4">
                 <p className="text-emerald-400/80 text-sm font-medium">Ready to finalize</p>
-                <p className="text-emerald-400/40 text-xs mt-1">Click &quot;Add to Roster&quot; to complete onboarding and add this artist to the Tru Management roster.</p>
+                <p className="text-emerald-400/40 text-xs mt-1">Click &quot;Add to Roster&quot; to complete onboarding and add this artist to the NVC roster.</p>
               </div>
             </div>
           )}

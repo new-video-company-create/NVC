@@ -56,7 +56,7 @@ function InvoicesList() {
           <Image src="/nvc-logo.png" alt="NVC" width={32} height={32} className="rounded-lg opacity-90" />
           <div>
             <h1 className="text-xl font-medium text-white/90">Invoice hub</h1>
-            <p className="text-white/30 text-sm mt-1">Tru Management–style billing · {NVC_COMPANY} branded</p>
+            <p className="text-white/30 text-sm mt-1">NVC billing workspace · {NVC_COMPANY}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -16,7 +16,7 @@ function EPKContent() {
   const [headline, setHeadline] = useState("");
   const [pressQuote, setPressQuote] = useState("");
   const [achievements, setAchievements] = useState("");
-  const [contactInfo, setContactInfo] = useState("Joe Meyer | Tru Management\n508-864-7360 | Joe@trumgmt.org");
+  const [contactInfo, setContactInfo] = useState("NVC Studio Team | New Video Company\nhello@newvideocompany.com");
 
   useEffect(() => {
     const a = getArtists();
@@ -76,7 +76,7 @@ function EPKContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/tru-logo.png" alt="Tru" width={32} height={32} className="rounded-lg" />
+          <Image src="/nvc-logo.png" alt="NVC" width={32} height={32} className="rounded-lg" />
           <div>
             <h1 className="text-xl font-medium text-white/90">EPK Generator</h1>
             <p className="text-white/30 text-sm mt-1">Create electronic press kits &amp; artist one-sheets</p>
@@ -199,7 +199,7 @@ function EPKContent() {
 
             <div className="footer pt-4 border-t border-white/[0.06]">
               <p className="text-white/30 text-xs whitespace-pre-line">{contactInfo}</p>
-              <p className="text-white/15 text-[10px] mt-2">Managed by Tru Management &middot; Powered by NVC</p>
+              <p className="text-white/15 text-[10px] mt-2">Produced by New Video Company</p>
             </div>
           </div>
         </motion.div>

@@ -6,6 +6,77 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getArtists, saveArtist, type Artist } from "@/lib/storage";
 
+type SpotifySyncPayload = {
+  id: string;
+  followers: number;
+  popularity: number;
+  avgTopTrackPopularity?: number;
+  imageUrl: string;
+  spotifyUrl: string;
+  genres: string[];
+  topTracks: { name: string }[];
+};
+
+async function postSpotifySync(artists: Artist[]): Promise<{
+  ok: boolean;
+  payload?: { results?: { rosterId: string; ok: boolean; data: SpotifySyncPayload | null }[]; error?: string };
+  syncError?: string;
+  status: number;
+}> {
+  const res = await fetch("/api/spotify/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      artists: artists.map((a) => ({
+        rosterId: a.id,
+        stageName: a.stageName,
+        spotifyId: a.spotifyId,
+        spotify: a.spotify,
+      })),
+    }),
+    cache: "no-store",
+  });
+  const raw = await res.text();
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    return {
+      ok: false,
+      status: res.status,
+      syncError: `Non-JSON response (HTTP ${res.status}). Turn off Vercel Deployment Protection for this project or exclude /api routes.`,
+    };
+  }
+  const payload = JSON.parse(raw) as {
+    results?: { rosterId: string; ok: boolean; data: SpotifySyncPayload | null }[];
+    error?: string;
+  };
+  if (!res.ok) {
+    return { ok: false, status: res.status, payload, syncError: payload.error || `HTTP ${res.status}` };
+  }
+  return { ok: true, status: res.status, payload };
+}
+
+function applySpotifyRows(current: Artist[], payload: { results?: { rosterId: string; ok: boolean; data: SpotifySyncPayload | null }[] }) {
+  for (const row of payload.results || []) {
+    if (!row.ok || !row.data?.id) continue;
+    const artist = current.find((x) => x.id === row.rosterId);
+    if (!artist) continue;
+    const d = row.data;
+    saveArtist({
+      ...artist,
+      followers: d.followers,
+      popularity: d.popularity,
+      avgTopTrackPopularity: d.avgTopTrackPopularity,
+      spotifyImageUrl: d.imageUrl || artist.spotifyImageUrl,
+      spotifyId: d.id,
+      spotify: d.spotifyUrl || artist.spotify,
+      genres: d.genres?.length ? d.genres : artist.genres,
+      topTracks: d.topTracks?.length > 0
+        ? d.topTracks.map((t) => t.name)
+        : artist.topTracks,
+    });
+  }
+}
+
 const statusColors: Record<string, string> = {
   active: "bg-emerald-500/10 text-emerald-400/80",
   prospect: "bg-blue-500/10 text-blue-400/80",
@@ -46,32 +117,22 @@ export default function RosterPage() {
   const [selected, setSelected] = useState<Artist | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const hasSynced = useRef(false);
 
   const syncAll = useCallback(async () => {
     setSyncing(true);
+    setSyncError(null);
     const current = getArtists();
-    for (const artist of current) {
-      try {
-        const res = await fetch(`/api/spotify?q=${encodeURIComponent(artist.stageName)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.id) {
-            saveArtist({
-              ...artist,
-              followers: data.followers,
-              popularity: data.popularity,
-              spotifyImageUrl: data.imageUrl || artist.spotifyImageUrl,
-              spotifyId: data.id,
-              spotify: data.spotifyUrl || artist.spotify,
-              genres: data.genres || artist.genres,
-              topTracks: data.topTracks?.length > 0
-                ? data.topTracks.map((t: { name: string }) => t.name)
-                : artist.topTracks,
-            });
-          }
-        }
-      } catch { /* silent */ }
+    try {
+      const out = await postSpotifySync(current);
+      if (!out.ok) {
+        setSyncError(out.syncError || "Sync failed");
+      } else if (out.payload) {
+        applySpotifyRows(current, out.payload);
+      }
+    } catch (e) {
+      setSyncError(String(e));
     }
     const updated = getArtists();
     setArtists(updated);
@@ -96,49 +157,44 @@ export default function RosterPage() {
 
   const syncOne = useCallback(async (artist: Artist) => {
     setSyncing(true);
+    setSyncError(null);
     try {
-      const res = await fetch(`/api/spotify?q=${encodeURIComponent(artist.stageName)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.id) {
-          const updated: Artist = {
-            ...artist,
-            followers: data.followers,
-            popularity: data.popularity,
-            spotifyImageUrl: data.imageUrl || artist.spotifyImageUrl,
-            spotifyId: data.id,
-            spotify: data.spotifyUrl || artist.spotify,
-            genres: data.genres || artist.genres,
-            topTracks: data.topTracks?.length > 0
-              ? data.topTracks.map((t: { name: string }) => t.name)
-              : artist.topTracks,
-          };
-          saveArtist(updated);
+      const out = await postSpotifySync([artist]);
+      if (!out.ok) {
+        setSyncError(out.syncError || "Sync failed");
+      } else if (out.payload) {
+        applySpotifyRows([artist], out.payload);
+        const updated = getArtists().find((a) => a.id === artist.id);
+        if (updated) {
           setArtists(getArtists());
           setSelected(updated);
         }
       }
-    } catch { /* silent */ }
+    } catch (e) {
+      setSyncError(String(e));
+    }
     setLastSync(new Date().toLocaleTimeString());
     setSyncing(false);
   }, []);
 
-  const totalFollowers = artists.reduce((s, a) => s + (a.followers || 0), 0);
-  const avgPop = artists.filter(a => a.popularity).length > 0
-    ? Math.round(artists.reduce((s, a) => s + (a.popularity || 0), 0) / artists.filter(a => a.popularity).length)
-    : 0;
+  const totalFollowers = artists.reduce((s, a) => s + (typeof a.followers === "number" ? a.followers : 0), 0);
+  const withPop = artists.filter((a) => typeof a.popularity === "number");
+  const avgPop =
+    withPop.length > 0 ? Math.round(withPop.reduce((s, a) => s + (a.popularity ?? 0), 0) / withPop.length) : 0;
+  const maxF = Math.max(1, ...artists.map((a) => (typeof a.followers === "number" ? a.followers : 0)));
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/tru-logo.png" alt="Tru" width={32} height={32} className="rounded-lg" />
+          <Image src="/nvc-logo.png" alt="NVC" width={32} height={32} className="rounded-lg" />
           <div>
             <h1 className="text-xl font-medium text-white/90">Artist Roster</h1>
             <p className="text-white/30 text-sm mt-1">{artists.length} artists &middot; {totalFollowers > 0 ? fmtNum(totalFollowers) + " total followers" : ""}</p>
           </div>
         </div>
+        <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">
           {lastSync && <span className="text-white/15 text-[10px]">{lastSync}</span>}
           <button onClick={syncAll} disabled={syncing} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400/70 text-xs transition-colors cursor-pointer disabled:opacity-50">
@@ -147,6 +203,10 @@ export default function RosterPage() {
           <Link href="/dashboard/roster/onboard" className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] text-white/80 text-xs transition-colors">
             + Onboard
           </Link>
+        </div>
+        {syncError && (
+          <p className="text-red-400/90 text-[10px] max-w-md text-right leading-snug">{syncError}</p>
+        )}
         </div>
       </div>
 
@@ -158,7 +218,7 @@ export default function RosterPage() {
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-white/20 text-[9px] uppercase tracking-wider">Avg Popularity</p>
-          <p className="text-blue-400/80 text-xl font-bold mt-1">{avgPop > 0 ? `${avgPop}/100` : "—"}</p>
+          <p className="text-blue-400/80 text-xl font-bold mt-1">{withPop.length ? `${avgPop}/100` : "—"}</p>
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-white/20 text-[9px] uppercase tracking-wider">Active Artists</p>
@@ -190,8 +250,12 @@ export default function RosterPage() {
                   </div>
                   <p className="text-white/25 text-xs mt-0.5">{artist.genre}</p>
                   <div className="flex gap-3 mt-1">
-                    {artist.followers != null && artist.followers > 0 && <span className="text-white/15 text-[10px]">{fmtNum(artist.followers)} followers</span>}
-                    {artist.popularity != null && artist.popularity > 0 && <span className="text-white/15 text-[10px]">Pop: {artist.popularity}</span>}
+                    {typeof artist.followers === "number" && (
+                      <span className="text-white/15 text-[10px]">{fmtNum(artist.followers)} followers</span>
+                    )}
+                    {typeof artist.popularity === "number" && (
+                      <span className="text-white/15 text-[10px]">Pop {artist.popularity}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -246,20 +310,33 @@ export default function RosterPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                   <div className="bg-white/[0.03] rounded-xl p-4 flex flex-col items-center text-center">
-                    <p className="text-white/20 text-[9px] uppercase tracking-wider mb-1">Popularity</p>
-                    {selected.popularity ? <PopularityRing value={selected.popularity} /> : <p className="text-white/30 text-lg mt-2">—</p>}
+                    <p className="text-white/20 text-[9px] uppercase tracking-wider mb-1">Artist index</p>
+                    {typeof selected.popularity === "number" ? (
+                      <PopularityRing value={selected.popularity} />
+                    ) : (
+                      <p className="text-white/30 text-lg mt-2">—</p>
+                    )}
                   </div>
                   <div className="bg-white/[0.03] rounded-xl p-4">
                     <p className="text-white/20 text-[9px] uppercase tracking-wider">Followers</p>
-                    <p className="text-emerald-400/80 text-2xl font-bold mt-2">{selected.followers ? fmtNum(selected.followers) : "—"}</p>
+                    <p className="text-emerald-400/80 text-2xl font-bold mt-2">
+                      {typeof selected.followers === "number" ? fmtNum(selected.followers) : "—"}
+                    </p>
                     <p className="text-white/15 text-[10px] mt-1">Spotify followers</p>
+                  </div>
+                  <div className="bg-white/[0.03] rounded-xl p-4">
+                    <p className="text-white/20 text-[9px] uppercase tracking-wider">Track momentum</p>
+                    <p className="text-violet-400/80 text-2xl font-bold mt-2">
+                      {typeof selected.avgTopTrackPopularity === "number" ? `${selected.avgTopTrackPopularity}/100` : "—"}
+                    </p>
+                    <p className="text-white/15 text-[10px] mt-1">Avg top-3 track popularity</p>
                   </div>
                   <div className="bg-white/[0.03] rounded-xl p-4">
                     <p className="text-white/20 text-[9px] uppercase tracking-wider">Status</p>
                     <p className="text-white/80 text-lg font-semibold mt-2 capitalize">{selected.status}</p>
-                    <p className="text-white/15 text-[10px] mt-1">Management status</p>
+                    <p className="text-white/15 text-[10px] mt-1">Production</p>
                   </div>
                   <div className="bg-white/[0.03] rounded-xl p-4">
                     <p className="text-white/20 text-[9px] uppercase tracking-wider">Managed Since</p>
@@ -267,6 +344,25 @@ export default function RosterPage() {
                     <p className="text-white/15 text-[10px] mt-1">On roster</p>
                   </div>
                 </div>
+
+                {typeof selected.followers === "number" && (
+                  <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
+                    <p className="text-white/25 text-[10px] uppercase tracking-[0.2em] mb-2">Roster reach vs. largest act</p>
+                    <div className="flex justify-between text-xs text-white/40 mb-1">
+                      <span>{selected.stageName}</span>
+                      <span>{Math.round((selected.followers / maxF) * 100)}% of max</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-600/60 to-cyan-400/70"
+                        style={{ width: `${Math.min(100, (selected.followers / maxF) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-white/15 text-[10px] mt-2">
+                      Streams are not available via the public API — use Spotify for Artists for play counts. This view uses follower and popularity indices for planning.
+                    </p>
+                  </div>
+                )}
 
                 {/* Top Tracks */}
                 {selected.topTracks && selected.topTracks.length > 0 && (
