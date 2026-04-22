@@ -422,9 +422,9 @@ export default function DashboardOverview() {
               ),
             },
             {
-              title: "Talent roster",
+              title: "Talent",
               href: "/dashboard/roster",
-              blurb: "Subjects & Spotify IDs",
+              blurb: "On-screen talent & references",
               icon: (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path

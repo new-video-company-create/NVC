@@ -162,15 +162,16 @@ export function importRowsFromSheetPaste(paste: string): TrackerRow[] {
 
 function defaultRows(): TrackerRow[] {
   const today = new Date().toISOString().slice(0, 10);
-  const due = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+  const dueLate = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+  const dueCurrent = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   return [
     {
-      id: "trk_demo_video",
+      id: "trk_361firm_video",
       category: "video",
-      description: "Video shoot package",
+      description: "361firm — principal photography + offline edit (sample row)",
       originalAmount: 1899.63,
       dateIssued: today,
-      dueDate: due,
+      dueDate: dueLate,
       paymentsMadeTotal: 0,
       paymentsMadeThisWeek: 0,
       previousBalance: 0,
@@ -179,7 +180,25 @@ function defaultRows(): TrackerRow[] {
       lateFeeWeek2: 0,
       lateFeeWeek3: 0,
       lateFeeWeek4: 0,
-      notes: "Replace with your imported sheet values.",
+      notes: "Import your real weekly tabs to replace this starter row.",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "trk_361firm_marketing",
+      category: "marketing",
+      description: "361firm — monthly marketing retainer + paid social ops (sample row)",
+      originalAmount: 4200,
+      dateIssued: today,
+      dueDate: dueCurrent,
+      paymentsMadeTotal: 1200,
+      paymentsMadeThisWeek: 400,
+      previousBalance: 3000,
+      currentBalance: 2600,
+      lateFeeWeek1: 0,
+      lateFeeWeek2: 0,
+      lateFeeWeek3: 0,
+      lateFeeWeek4: 0,
+      notes: "Marketing rows support Late Fees Week 1–4 when you paste from Sheets.",
       createdAt: new Date().toISOString(),
     },
   ];

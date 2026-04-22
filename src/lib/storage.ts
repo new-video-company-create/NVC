@@ -55,6 +55,7 @@ export interface Artist {
 
 const INVOICES_KEY = "nvc_invoices";
 const ARTISTS_KEY = "nvc_artists";
+const INVOICE_DEMO_MIGRATION_KEY = "nvc_invoice_demo_migrated_v4";
 
 function getItem<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -72,7 +73,22 @@ function setItem<T>(key: string, value: T) {
 }
 
 export function getInvoices(): Invoice[] {
-  return getItem<Invoice[]>(INVOICES_KEY, defaultInvoices);
+  const fallback = defaultInvoices;
+  const rows = getItem<Invoice[]>(INVOICES_KEY, fallback);
+  if (typeof window === "undefined") return rows.length ? rows : fallback;
+
+  if (!localStorage.getItem(INVOICE_DEMO_MIGRATION_KEY)) {
+    const legacy = new Set(["Create Music Group", "Sony Music", "Atlantic Records"]);
+    const hasLegacy = rows.some((r) => legacy.has(r.billToName));
+    if (hasLegacy) {
+      setItem(INVOICES_KEY, fallback);
+      localStorage.setItem(INVOICE_DEMO_MIGRATION_KEY, "1");
+      return fallback;
+    }
+    localStorage.setItem(INVOICE_DEMO_MIGRATION_KEY, "1");
+  }
+
+  return rows.length ? rows : fallback;
 }
 
 export function getInvoiceById(id: string): Invoice | undefined {
@@ -170,28 +186,68 @@ function makeDefaultInvoice(overrides: Partial<Invoice> & { id: string; invoiceN
 
 const defaultInvoices: Invoice[] = [
   makeDefaultInvoice({
-    id: "inv-003", invoiceNumber: "2026-003", date: "2026-04-07", dueDate: "2026-04-21",
-    billToName: "Create Music Group", billToAddress: "1320 North Wilton Place, Los Angeles, CA, 90028",
-    campaignScope: "Execution of the P!NK Marketing Campaign, including TikTok influencer campaign, Spotify promotional campaigns, and applicable reimbursements.",
+    id: "inv-003",
+    invoiceNumber: "2026-003",
+    date: "2026-04-07",
+    dueDate: "2026-04-21",
+    billToName: "361firm",
+    billToAddress: "Client billing address on file",
+    campaignScope:
+      "Video production package: principal photography, offline edit, color, sound mix, and two social cutdowns for paid media.",
     lineItems: [
-      { description: "Rare Fruit Marketing — TikTok influencer campaign + Spotify Promo Campaign", quantity: 1, rate: "3000", amount: "3000" },
-      { description: 'Spotify Marquee "P!NK" Reimbursement', quantity: 1, rate: "500", amount: "500" },
+      {
+        description: "Production day + kit rental + small crew (8h)",
+        quantity: 1,
+        rate: "3000",
+        amount: "3000",
+      },
+      {
+        description: "Paid media launch support (setup + 2 revisions)",
+        quantity: 1,
+        rate: "500",
+        amount: "500",
+      },
     ],
-    status: "pending", createdAt: "2026-04-07T00:00:00Z",
+    status: "pending",
+    createdAt: "2026-04-07T00:00:00Z",
   }),
   makeDefaultInvoice({
-    id: "inv-002", invoiceNumber: "2026-002", date: "2026-03-28", dueDate: "2026-04-11",
-    billToName: "Atlantic Records", billToAddress: "1633 Broadway, New York, NY 10019",
-    campaignScope: "Social Media Campaign Q1",
-    lineItems: [{ description: "Social Media Campaign Q1 — Full service", quantity: 1, rate: "4200", amount: "4200" }],
-    status: "paid", createdAt: "2026-03-28T00:00:00Z",
+    id: "inv-002",
+    invoiceNumber: "2026-002",
+    date: "2026-03-28",
+    dueDate: "2026-04-11",
+    billToName: "Northwind Studios",
+    billToAddress: "Remote / distributed",
+    campaignScope: "Brand documentary + interview series (3 episodes).",
+    lineItems: [
+      {
+        description: "Edit + graphics package (3× 6–8 min episodes)",
+        quantity: 1,
+        rate: "4200",
+        amount: "4200",
+      },
+    ],
+    status: "paid",
+    createdAt: "2026-03-28T00:00:00Z",
   }),
   makeDefaultInvoice({
-    id: "inv-001", invoiceNumber: "2026-001", date: "2026-03-15", dueDate: "2026-03-29",
-    billToName: "Sony Music", billToAddress: "25 Madison Ave, New York, NY 10010",
-    campaignScope: "Spotify Playlist Promotion",
-    lineItems: [{ description: "Spotify Playlist Promotion — 4 week campaign", quantity: 1, rate: "2800", amount: "2800" }],
-    status: "paid", createdAt: "2026-03-15T00:00:00Z",
+    id: "inv-001",
+    invoiceNumber: "2026-001",
+    date: "2026-03-15",
+    dueDate: "2026-03-29",
+    billToName: "Harbor Retail Co.",
+    billToAddress: "123 Market Street, Boston, MA",
+    campaignScope: "Store launch social cutdowns + photography.",
+    lineItems: [
+      {
+        description: "Social cutdowns (9:16 + 1:1) ×12 + stills",
+        quantity: 1,
+        rate: "2800",
+        amount: "2800",
+      },
+    ],
+    status: "paid",
+    createdAt: "2026-03-15T00:00:00Z",
   }),
 ];
 
