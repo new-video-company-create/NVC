@@ -4,15 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
-import {
-  getInvoices,
-  getArtists,
-  saveArtist,
-  calcInvoiceTotal,
-  FMT,
-  type Invoice,
-  type Artist,
-} from "@/lib/storage";
+import { getInvoices, calcInvoiceTotal, FMT, type Invoice } from "@/lib/storage";
 import { getLeads, getVideoProjects } from "@/lib/studio-storage";
 import { NVC_TAGLINE } from "@/lib/nvc-brand";
 
@@ -29,22 +21,6 @@ const fadeUp = {
   }),
 };
 
-function fmtNum(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
-
-function fmtFollowers(n: number | undefined) {
-  if (typeof n !== "number") return "—";
-  return fmtNum(n);
-}
-
-function fmtPop(n: number | undefined) {
-  if (typeof n !== "number") return "—";
-  return `${n}/100`;
-}
-
 /** Days from today to date-only ISO string (local). */
 function daysFromToday(iso: string) {
   const t = new Date(iso + "T12:00:00").getTime();
@@ -52,17 +28,6 @@ function daysFromToday(iso: string) {
   start.setHours(0, 0, 0, 0);
   return Math.round((t - start.getTime()) / 86400000);
 }
-
-type SpotifySyncPayload = {
-  id: string;
-  followers: number;
-  popularity: number;
-  avgTopTrackPopularity?: number;
-  imageUrl: string;
-  spotifyUrl: string;
-  genres: string[];
-  topTracks: { name: string }[];
-};
 
 type StripeHealth = {
   ok: boolean;
@@ -73,10 +38,6 @@ type StripeHealth = {
 
 export default function DashboardOverview() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState<string | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
   const [stripeHealth, setStripeHealth] = useState<StripeHealth | null>(null);
   const [pulse, setPulse] = useState({ activeJobs: 0, dueWeek: 0, leads: 0 });
 
@@ -104,77 +65,8 @@ export default function DashboardOverview() {
       );
   }, []);
 
-  const syncAllArtists = useCallback(async () => {
-    setSyncing(true);
-    setSyncError(null);
-    const current = getArtists();
-    try {
-      const res = await fetch("/api/spotify/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          artists: current.map((a) => ({
-            rosterId: a.id,
-            stageName: a.stageName,
-            spotifyId: a.spotifyId,
-            spotify: a.spotify,
-          })),
-        }),
-        cache: "no-store",
-      });
-
-      const raw = await res.text();
-      const ct = res.headers.get("content-type") || "";
-      if (!ct.includes("application/json")) {
-        setSyncError(
-          `Spotify API returned non-JSON (HTTP ${res.status}). If Vercel Deployment Protection is on, allow public access to /api routes.`,
-        );
-        return;
-      }
-
-      const payload = JSON.parse(raw) as {
-        results?: { rosterId: string; ok: boolean; data: SpotifySyncPayload | null }[];
-        error?: string;
-      };
-
-      if (!res.ok) {
-        setSyncError(payload.error || `HTTP ${res.status}`);
-        return;
-      }
-
-      for (const row of payload.results || []) {
-        if (!row.ok || !row.data?.id) continue;
-        const artist = current.find((x) => x.id === row.rosterId);
-        if (!artist) continue;
-        const d = row.data;
-        saveArtist({
-          ...artist,
-          followers: d.followers,
-          popularity: d.popularity,
-          avgTopTrackPopularity: d.avgTopTrackPopularity,
-          spotifyImageUrl: d.imageUrl || artist.spotifyImageUrl,
-          spotifyId: d.id,
-          spotify: d.spotifyUrl || artist.spotify,
-          genres: d.genres?.length ? d.genres : artist.genres,
-          topTracks:
-            d.topTracks?.length > 0
-              ? d.topTracks.map((t) => t.name)
-              : artist.topTracks,
-        });
-      }
-
-      setArtists(getArtists());
-      setLastSync(new Date().toLocaleTimeString());
-    } catch (e) {
-      setSyncError(String(e));
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
   useEffect(() => {
     setInvoices(getInvoices());
-    setArtists(getArtists());
     refreshLocalPulse();
     refreshStripe();
   }, [refreshLocalPulse, refreshStripe]);
@@ -192,27 +84,6 @@ export default function DashboardOverview() {
   const paidInvoices = invoices.filter((i) => i.status === "paid");
   const openTotal = openInvoices.reduce((s, i) => s + calcInvoiceTotal(i).total, 0);
   const paidTotal = paidInvoices.reduce((s, i) => s + calcInvoiceTotal(i).total, 0);
-  const totalFollowers = artists.reduce(
-    (s, a) => s + (typeof a.followers === "number" ? a.followers : 0),
-    0,
-  );
-  const withPop = artists.filter((a) => typeof a.popularity === "number");
-  const avgPopularity =
-    withPop.length > 0
-      ? Math.round(withPop.reduce((s, a) => s + (a.popularity ?? 0), 0) / withPop.length)
-      : 0;
-  const withMomentum = artists.filter((a) => typeof a.avgTopTrackPopularity === "number");
-  const avgMomentum =
-    withMomentum.length > 0
-      ? Math.round(
-          withMomentum.reduce((s, a) => s + (a.avgTopTrackPopularity ?? 0), 0) /
-            withMomentum.length,
-        )
-      : 0;
-  const maxFollowers = Math.max(
-    1,
-    ...artists.map((a) => (typeof a.followers === "number" ? a.followers : 0)),
-  );
 
   const stripeLabel =
     stripeHealth?.configured && stripeHealth.mode
@@ -253,41 +124,23 @@ export default function DashboardOverview() {
             </div>
           </div>
           <div className="flex flex-col items-start gap-2 md:items-end">
-            <div className="flex flex-wrap items-center gap-2">
-              {lastSync ? (
-                <span className="text-[10px] text-white/25">Spotify synced {lastSync}</span>
-              ) : null}
-              <button
-                type="button"
-                onClick={syncAllArtists}
-                disabled={syncing}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 disabled:opacity-50"
-              >
-                {syncing ? (
-                  <>
-                    <span className="inline-block h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white/70" />
-                    Syncing roster…
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    Refresh Spotify data
-                  </>
-                )}
-              </button>
-            </div>
-            {syncError ? (
-              <p className="max-w-md text-right text-[10px] leading-snug text-red-400/90 md:text-right">
-                {syncError}
-              </p>
-            ) : null}
+            <Link
+              href="/dashboard/studio"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#f97316]/35 bg-[#f97316]/10 px-4 py-2 text-sm font-medium text-[#f97316] transition hover:bg-[#f97316]/15"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+              Open studio board
+            </Link>
+            <p className="max-w-xs text-right text-[10px] leading-snug text-white/25 md:text-right">
+              Jobs, shot-day checklist, and new-business leads (saved in this browser).
+            </p>
           </div>
         </div>
       </motion.section>
@@ -422,36 +275,6 @@ export default function DashboardOverview() {
               ),
             },
             {
-              title: "Talent",
-              href: "/dashboard/roster",
-              blurb: "On-screen talent & references",
-              icon: (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              ),
-            },
-            {
-              title: "EPK / one-sheet",
-              href: "/dashboard/epk",
-              blurb: "Press-ready PDFs",
-              icon: (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                  />
-                </svg>
-              ),
-            },
-            {
               title: "Transcripts",
               href: "/dashboard/transcripts",
               blurb: "Interview & VO pulls",
@@ -532,118 +355,8 @@ export default function DashboardOverview() {
         </div>
       </motion.div>
 
-      {/* Spotify talent — compact */}
-      <motion.div custom={7} variants={fadeUp} initial="hidden" animate="visible">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/25">
-              Talent signals
-            </h2>
-            <p className="mt-1 text-xs text-white/35">
-              Spotify reach for music-video clients — not the whole business, just context.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-[10px] text-white/25">
-            <span>
-              Roster reach{" "}
-              <strong className="text-white/50">
-                {artists.some((a) => typeof a.followers === "number")
-                  ? fmtNum(totalFollowers)
-                  : "—"}
-              </strong>
-            </span>
-            <span>
-              Avg artist index{" "}
-              <strong className="text-white/50">
-                {withPop.length ? `${avgPopularity}/100` : "—"}
-              </strong>
-            </span>
-            <span>
-              Track heat{" "}
-              <strong className="text-white/50">
-                {withMomentum.length ? `${avgMomentum}/100` : "—"}
-              </strong>
-            </span>
-            <Link
-              href="/dashboard/roster"
-              className="uppercase tracking-[0.2em] text-white/40 hover:text-white/60"
-            >
-              Open roster
-            </Link>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {artists.slice(0, 4).map((a) => {
-            const img = a.spotifyImageUrl || a.imageUrl;
-            return (
-              <Link
-                key={a.id}
-                href="/dashboard/roster"
-                className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/12"
-              >
-                <div className="flex items-center gap-3">
-                  {img ? (
-                    <img
-                      src={img}
-                      alt={a.stageName}
-                      className="h-11 w-11 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/[0.06]">
-                      <span className="text-sm font-bold text-white/40">{a.stageName[0]}</span>
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white/90 group-hover:text-white">
-                      {a.stageName}
-                    </p>
-                    <p className="truncate text-xs text-white/25">{a.genre}</p>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-black/30 py-2">
-                    <p className="text-[9px] uppercase tracking-wider text-white/20">Followers</p>
-                    <p className="text-xs font-semibold text-white/75">
-                      {fmtFollowers(a.followers)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-black/30 py-2">
-                    <p className="text-[9px] uppercase tracking-wider text-white/20">Artist</p>
-                    <p className="text-xs font-semibold text-white/75">{fmtPop(a.popularity)}</p>
-                  </div>
-                  <div className="rounded-lg bg-black/30 py-2">
-                    <p className="text-[9px] uppercase tracking-wider text-white/20">Tracks</p>
-                    <p className="text-xs font-semibold text-white/75">
-                      {typeof a.avgTopTrackPopularity === "number"
-                        ? `${a.avgTopTrackPopularity}/100`
-                        : "—"}
-                    </p>
-                  </div>
-                </div>
-                {typeof a.followers === "number" ? (
-                  <div className="mt-3">
-                    <div className="mb-1 flex justify-between text-[9px] text-white/15">
-                      <span>Share of roster</span>
-                      <span>{Math.round((a.followers / maxFollowers) * 100)}%</span>
-                    </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-orange-500/50 to-amber-400/80 transition-all duration-700"
-                        style={{
-                          width: `${Math.min(100, (a.followers / maxFollowers) * 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
-      </motion.div>
-
       {/* Recent invoices */}
-      <motion.div custom={8} variants={fadeUp} initial="hidden" animate="visible">
+      <motion.div custom={7} variants={fadeUp} initial="hidden" animate="visible">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/25">
             Recent invoices
